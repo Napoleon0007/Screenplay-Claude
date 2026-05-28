@@ -1,0 +1,2059 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Screenplay — Editor</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+  :root {
+    --bg-0: #0a0a0b;
+    --bg-1: #111114;
+    --bg-2: #17171c;
+    --bg-3: #1f1f26;
+    --bg-4: #2a2a33;
+    --border: #2a2a33;
+    --border-strong: #3a3a45;
+    --text-0: #f4f4f5;
+    --text-1: #d4d4d8;
+    --text-2: #a1a1aa;
+    --text-3: #71717a;
+    --accent: #e0b96b;
+    --accent-soft: rgba(224, 185, 107, 0.12);
+    --danger: #ef4444;
+    --page: #f7f5ef;
+    --page-ink: #16151a;
+  }
+
+  * { box-sizing: border-box; }
+  html, body, #root { height: 100%; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-0);
+    color: var(--text-1);
+    overflow: hidden;
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- layout ---- */
+  .app { display: flex; height: 100vh; width: 100vw; }
+  .col { display: flex; flex-direction: column; height: 100%; }
+  .sidebar {
+    width: 260px;
+    background: var(--bg-1);
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+    transition: width 0.18s ease;
+    overflow: hidden;
+  }
+  .sidebar.right { border-right: none; border-left: 1px solid var(--border); width: 340px; }
+  .sidebar.collapsed { width: 0; }
+
+  .sidebar-header {
+    padding: 14px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-3);
+    font-weight: 600;
+  }
+
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg-0); }
+
+  /* ---- top bar ---- */
+  .topbar {
+    height: 48px;
+    flex-shrink: 0;
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 12px;
+  }
+  .topbar .title-input {
+    background: transparent;
+    border: none;
+    color: var(--text-0);
+    font-size: 14px;
+    font-weight: 600;
+    outline: none;
+    min-width: 0;
+    flex: 1;
+    max-width: 360px;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .topbar .title-input:hover { background: var(--bg-2); }
+  .topbar .title-input:focus { background: var(--bg-2); }
+
+  .stat { display: flex; align-items: center; gap: 6px; padding: 0 8px; color: var(--text-2); font-size: 12px; }
+  .stat .stat-value { color: var(--text-0); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .stat-divider { width: 1px; height: 18px; background: var(--border); }
+
+  .save-indicator { font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 6px; }
+  .save-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; }
+  .save-dot.saving { background: var(--accent); }
+
+  /* ---- buttons ---- */
+  .btn {
+    background: var(--bg-2);
+    color: var(--text-1);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.12s;
+    font-family: inherit;
+  }
+  .btn:hover { background: var(--bg-3); border-color: var(--border-strong); color: var(--text-0); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--accent); color: #1a1408; border-color: var(--accent); font-weight: 600; }
+  .btn.primary:hover { background: #f0c97c; }
+  .btn.ghost { background: transparent; border-color: transparent; }
+  .btn.ghost:hover { background: var(--bg-2); }
+  .btn.icon { padding: 6px; width: 30px; height: 30px; justify-content: center; }
+
+  .menu-wrap { position: relative; }
+  .menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--bg-2);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 6px;
+    min-width: 180px;
+    z-index: 100;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .menu button {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--text-1);
+    padding: 8px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: inherit;
+  }
+  .menu button:hover { background: var(--bg-3); color: var(--text-0); }
+  .menu .sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* ---- scene list ---- */
+  .list { padding: 6px; overflow-y: auto; flex: 1; }
+  .scene-row, .char-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-2);
+    border: 1px solid transparent;
+    line-height: 1.35;
+  }
+  .scene-row:hover, .char-row:hover { background: var(--bg-2); color: var(--text-0); }
+  .scene-row.active { background: var(--accent-soft); color: var(--accent); border-color: rgba(224,185,107,0.25); }
+  .scene-num {
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    min-width: 22px;
+    font-size: 11px;
+  }
+  .scene-text { flex: 1; word-break: break-word; }
+
+  .char-row .char-name { font-weight: 600; color: var(--text-0); }
+  .char-row .char-meta { color: var(--text-3); font-size: 11px; margin-top: 2px; }
+
+  .empty {
+    padding: 20px 14px;
+    color: var(--text-3);
+    font-size: 12px;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  /* ---- editor / page ---- */
+  .editor-scroll {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg-0);
+    padding: 36px 24px 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .page {
+    background: var(--page);
+    color: var(--page-ink);
+    width: 8.5in;
+    min-height: 11in;
+    padding: 1in 1in 1in 1.5in;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+    font-family: 'Courier Prime', 'Courier New', monospace;
+    font-size: 12pt;
+    line-height: 1;
+    position: relative;
+  }
+  .page-number {
+    position: absolute;
+    top: 0.5in;
+    right: 1in;
+    font-size: 12pt;
+    color: rgba(0,0,0,0.5);
+    font-family: 'Courier Prime', monospace;
+  }
+
+  /* element wrappers */
+  .el {
+    position: relative;
+    margin: 0;
+    padding: 0;
+  }
+  .el-textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    font: inherit;
+    color: inherit;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    display: block;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1;
+    caret-color: var(--accent);
+  }
+  .el.scene_heading { margin-top: 24px; }
+  .el.scene_heading .el-textarea { text-transform: uppercase; font-weight: 700; }
+  .el.action { margin-top: 12px; }
+  .el.character { margin-top: 12px; padding-left: 22ch; }
+  .el.character .el-textarea { text-transform: uppercase; }
+  .el.parenthetical { padding-left: 16ch; padding-right: 19ch; }
+  .el.dialogue { padding-left: 10ch; padding-right: 10ch; }
+  .el.transition { margin-top: 12px; text-align: right; }
+  .el.transition .el-textarea { text-transform: uppercase; text-align: right; }
+  .el.shot { margin-top: 12px; }
+  .el.shot .el-textarea { text-transform: uppercase; }
+  .el.note { color: #888; font-style: italic; }
+
+  .el-textarea::placeholder { color: rgba(0,0,0,0.25); font-style: italic; }
+
+  /* element label badge on hover/focus */
+  .el-label {
+    position: absolute;
+    left: -130px;
+    top: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-3);
+    padding: 3px 7px;
+    border-radius: 4px;
+    background: var(--bg-2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .el:focus-within .el-label { opacity: 1; }
+
+  /* ---- title page ---- */
+  .titlepage {
+    background: var(--page);
+    color: var(--page-ink);
+    width: 8.5in;
+    min-height: 11in;
+    padding: 1in;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    font-family: 'Courier Prime', monospace;
+    font-size: 12pt;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .titlepage input, .titlepage textarea {
+    background: transparent;
+    border: none;
+    outline: none;
+    font: inherit;
+    color: inherit;
+    text-align: center;
+    width: 70%;
+    padding: 6px;
+    border-radius: 4px;
+  }
+  .titlepage input:hover, .titlepage textarea:hover { background: rgba(0,0,0,0.04); }
+  .titlepage .tp-title { font-size: 18pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .titlepage .tp-byline { margin-top: 2in; }
+  .titlepage .tp-by { color: rgba(0,0,0,0.6); margin-bottom: 12px; }
+  .titlepage .tp-author { font-size: 14pt; }
+  .titlepage .tp-contact {
+    margin-top: auto;
+    align-self: flex-start;
+    text-align: left;
+    font-size: 11pt;
+    color: rgba(0,0,0,0.7);
+    width: 100%;
+  }
+  .titlepage .tp-contact textarea { text-align: left; width: 100%; resize: vertical; min-height: 60px; }
+
+  /* ---- AI panel ---- */
+  .ai-wrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-2);
+    padding: 10px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    font-family: inherit;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab:hover { color: var(--text-0); }
+
+  .ai-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .ai-presets { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .ai-presets .btn { font-size: 11px; padding: 8px; justify-content: center; text-align: center; }
+  .ai-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+  .ai-msg { padding: 10px 12px; border-radius: 8px; font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; }
+  .ai-msg.user { background: var(--bg-2); color: var(--text-1); align-self: flex-end; max-width: 90%; }
+  .ai-msg.assistant { background: var(--accent-soft); color: var(--text-0); border: 1px solid rgba(224,185,107,0.18); }
+  .ai-msg .msg-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .ai-msg .msg-actions button {
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--text-2);
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10.5px;
+    font-family: inherit;
+  }
+  .ai-msg .msg-actions button:hover { color: var(--text-0); border-color: var(--text-2); }
+
+  .ai-input-wrap { padding: 10px; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .ai-input {
+    width: 100%;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-0);
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 12.5px;
+    resize: none;
+    outline: none;
+    min-height: 60px;
+  }
+  .ai-input:focus { border-color: var(--accent); }
+  .ai-send-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+  .ai-mini { font-size: 10.5px; color: var(--text-3); }
+  .ai-key-wrap { padding: 12px; border-top: 1px solid var(--border); background: var(--bg-2); }
+  .ai-key-wrap input { width: 100%; background: var(--bg-1); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; color: var(--text-0); font-family: monospace; font-size: 11px; outline: none; }
+  .ai-key-wrap input:focus { border-color: var(--accent); }
+
+  /* ---- modal ---- */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .modal {
+    background: var(--bg-1);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    padding: 24px;
+    width: 460px;
+    max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .modal h3 { margin: 0 0 12px; color: var(--text-0); font-size: 16px; }
+  .modal p { color: var(--text-2); font-size: 13px; line-height: 1.5; margin: 0 0 14px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+  /* ---- format toolbar ---- */
+  .format-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    overflow-x: auto;
+  }
+  .format-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-2);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .format-btn:hover { color: var(--text-0); background: var(--bg-2); }
+  .format-btn.active { color: var(--accent); background: var(--accent-soft); border-color: rgba(224,185,107,0.25); }
+  .format-key {
+    background: var(--bg-3);
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px;
+    color: var(--text-3);
+    margin-left: 6px;
+    font-family: 'Courier Prime', monospace;
+  }
+
+  /* ---- scrollbars ---- */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--bg-4); background-clip: padding-box; border: 2px solid transparent; }
+
+  /* ---- icon ---- */
+  .icon-svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  /* ---- autocomplete ---- */
+  .autocomplete {
+    position: absolute;
+    background: var(--bg-2);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 4px;
+    z-index: 50;
+    min-width: 180px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+  }
+  .autocomplete button {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--text-1);
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+  }
+  .autocomplete button:hover, .autocomplete button.selected { background: var(--accent-soft); color: var(--accent); }
+
+  /* ---- tooltips ---- */
+  .tip {
+    position: fixed;
+    z-index: 9999;
+    background: #08080a;
+    border: 1px solid var(--border-strong);
+    color: var(--text-0);
+    padding: 9px 13px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    max-width: 260px;
+    pointer-events: none;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,0,0,0.4);
+    line-height: 1.5;
+    animation: tipIn 0.14s ease-out;
+    font-family: 'Inter', sans-serif;
+  }
+  .tip.help-mode { max-width: 340px; padding: 11px 14px; border-color: var(--accent); box-shadow: 0 14px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(224,185,107,0.25); }
+  .tip-label {
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+    font-size: 12px;
+    letter-spacing: 0.01em;
+  }
+  .tip-desc { color: var(--text-1); }
+  .tip-shortcut {
+    margin-top: 7px;
+    font-size: 10.5px;
+    color: var(--text-3);
+    font-family: 'Courier Prime', monospace;
+    display: inline-block;
+  }
+  .tip-shortcut kbd {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin: 0 2px;
+    color: var(--text-1);
+    font-family: inherit;
+  }
+  .tip-example {
+    margin-top: 7px;
+    font-family: 'Courier Prime', monospace;
+    background: rgba(224,185,107,0.08);
+    border-left: 2px solid var(--accent);
+    padding: 5px 9px;
+    font-size: 11px;
+    color: var(--text-1);
+    border-radius: 0 4px 4px 0;
+    white-space: pre-wrap;
+  }
+  @keyframes tipIn {
+    from { opacity: 0; transform: var(--tip-from, translateX(-50%) translateY(-4px)); }
+    to   { opacity: 1; transform: var(--tip-to,   translateX(-50%) translateY(0)); }
+  }
+  .help-pulse {
+    animation: helpPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes helpPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(224,185,107,0.5); }
+    50%      { box-shadow: 0 0 0 4px rgba(224,185,107,0); }
+  }
+
+  /* responsive */
+  @media (max-width: 1100px) {
+    .sidebar { width: 220px; }
+    .sidebar.right { width: 300px; }
+  }
+  @media (max-width: 900px) {
+    .sidebar { position: absolute; z-index: 50; height: 100%; }
+    .sidebar.right { right: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } = React;
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+const ELEMENT_TYPES = {
+  scene_heading: { label: 'Scene Heading',  short: 'Scene', placeholder: 'INT. LOCATION - DAY' },
+  action:        { label: 'Action',         short: 'Action', placeholder: 'Describe the action…' },
+  character:     { label: 'Character',      short: 'Char',  placeholder: 'CHARACTER NAME' },
+  parenthetical: { label: 'Parenthetical',  short: '(...)', placeholder: '(beat)' },
+  dialogue:      { label: 'Dialogue',       short: 'Dial',  placeholder: 'Spoken line…' },
+  transition:    { label: 'Transition',     short: 'Trans', placeholder: 'CUT TO:' },
+  shot:          { label: 'Shot',           short: 'Shot',  placeholder: 'ANGLE ON —' },
+};
+const ELEMENT_ORDER = ['scene_heading','action','character','parenthetical','dialogue','transition','shot'];
+
+const ELEMENT_HELP = {
+  scene_heading: {
+    desc: 'Opens a new scene. Tells the reader where and when we are.',
+    deep: 'A Scene Heading (or "slug line") opens every new scene. It tells the reader the location and time of day, and it\'s how scripts are broken into shots on set. Type INT. (interior) or EXT. (exterior) at the start of a new line and the editor will convert it automatically.',
+    example: 'INT. COFFEE SHOP - DAY\nEXT. ROOFTOP - NIGHT',
+  },
+  action: {
+    desc: 'Description of what happens on screen.',
+    deep: 'Action lines describe what we see and hear — characters, behaviour, atmosphere. Always present tense. Keep it lean and visual: if it can\'t be filmed, cut it. This is the default element when you press Enter after most things.',
+    example: 'The WRITER stares at the cursor.\nRain drums against the window.',
+  },
+  character: {
+    desc: 'The name of who\'s about to speak. All caps.',
+    deep: 'A character cue is the name of who is about to speak, in ALL CAPS, indented about 3.7" from the page edge. Add (V.O.), (O.S.) or (CONT\'D) in parentheses after the name if needed. After a character cue, pressing Enter takes you straight into their dialogue.',
+    example: 'WRITER\nMARY (V.O.)\nDETECTIVE HOLMES (CONT\'D)',
+  },
+  parenthetical: {
+    desc: 'A short delivery direction, in parens, on its own line.',
+    deep: 'Parentheticals are tiny direction notes — how a line is delivered, who it\'s aimed at, a beat. Use sparingly: industry pros consider too many a sign of overwriting. Type "(" at the start of a dialogue line and the editor will convert it to a parenthetical for you.',
+    example: '(beat)\n(to Mary)\n(under her breath)',
+  },
+  dialogue: {
+    desc: 'The words spoken by the character above.',
+    deep: 'Dialogue is what the character actually says, indented underneath their name cue. Pressing Enter after a dialogue line drops you back to Action — press Tab from there if you want to give the same character another line via a new character cue.',
+    example: 'Alright. From the top.\nI\'m not staying for this.',
+  },
+  transition: {
+    desc: 'A scene-change instruction (CUT TO:, FADE OUT., etc.) — right-aligned.',
+    deep: 'A Transition signals how one scene gives way to the next. Always in ALL CAPS, right-aligned. Most professional scripts use them sparingly — modern style usually lets scene-heading changes do the work. Typing "CUT TO:" or "FADE OUT." in an Action line auto-converts it to a Transition.',
+    example: 'CUT TO:\nSMASH CUT TO:\nFADE OUT.',
+  },
+  shot: {
+    desc: 'A specific camera angle or detail, in all caps.',
+    deep: 'A Shot directs the camera within an ongoing scene without changing the location. Use it when a specific angle is essential to the story — otherwise let the director find it. ALL CAPS, full width.',
+    example: 'ANGLE ON — THE LETTER\nCLOSE ON HER EYES\nBACK TO SCENE',
+  },
+};
+
+const SCENE_PREFIXES = ['INT.', 'EXT.', 'INT/EXT', 'I/E', 'EST.'];
+const TRANSITIONS = ['CUT TO:', 'FADE OUT.', 'FADE IN:', 'SMASH CUT TO:', 'MATCH CUT TO:', 'DISSOLVE TO:', 'JUMP CUT TO:', 'TIME CUT:'];
+
+const STORAGE_KEY = 'screenplay_v2_doc';
+const KEY_STORAGE = 'screenplay_anthropic_key';
+
+const DEFAULT_DOC = {
+  title: 'UNTITLED',
+  author: '',
+  contact: '',
+  draftDate: '',
+  elements: [
+    { id: 1, type: 'scene_heading', text: 'INT. WRITER\'S STUDY - NIGHT' },
+    { id: 2, type: 'action', text: 'A lamp burns low over an unfinished manuscript. The WRITER stares at the blinking cursor — a familiar adversary.' },
+    { id: 3, type: 'character', text: 'WRITER' },
+    { id: 4, type: 'dialogue', text: 'Alright. From the top.' },
+  ],
+};
+
+// ============================================================
+// ICONS (inline SVG)
+// ============================================================
+const Icon = ({ name, size = 16, color = 'currentColor' }) => {
+  const paths = {
+    chevronLeft: 'M15 18l-6-6 6-6',
+    chevronRight: 'M9 18l6-6-6-6',
+    chevronDown: 'M6 9l6 6 6-6',
+    plus: 'M12 5v14M5 12h14',
+    download: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3',
+    sparkles: 'M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z',
+    book: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+    users: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75',
+    save: 'M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z M17 21v-8H7v8 M7 3v5h8',
+    title: 'M6 4v16 M18 4v16 M4 4h16 M4 20h16 M9 9h6 M9 12h6 M9 15h4',
+    settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z',
+    x: 'M18 6L6 18 M6 6l12 12',
+    send: 'M22 2L11 13 M22 2l-7 20-4-9-9-4 20-7z',
+    trash: 'M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
+    eye: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+    file: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8',
+    help: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3 M12 17h.01',
+  };
+  const d = paths[name];
+  if (!d) return null;
+  return (
+    <svg className="icon-svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {d.split(' M').map((part, i) => (
+        <path key={i} d={i === 0 ? part : 'M' + part} />
+      ))}
+    </svg>
+  );
+};
+
+// ============================================================
+// TOOLTIP / HELP SYSTEM
+// ============================================================
+const TipContext = React.createContext({ helpMode: false });
+
+const Tip = ({ label, desc, deepDesc, example, shortcut, position = 'bottom', children, disabled = false }) => {
+  const { helpMode } = React.useContext(TipContext);
+  const [show, setShow] = useState(false);
+  const [coords, setCoords] = useState({ x: 0, y: 0, side: 'bottom' });
+  const wrapRef = useRef(null);
+  const timer = useRef(null);
+
+  const handleEnter = () => {
+    if (disabled) return;
+    if (timer.current) clearTimeout(timer.current);
+    const delay = helpMode ? 60 : 450;
+    timer.current = setTimeout(() => {
+      const node = wrapRef.current;
+      if (!node) return;
+      const r = node.getBoundingClientRect();
+      let side = position;
+      let y = side === 'top' ? r.top - 10 : r.bottom + 10;
+      // viewport flipping
+      if (side === 'bottom' && y + 140 > window.innerHeight) { side = 'top'; y = r.top - 10; }
+      if (side === 'top' && y - 140 < 0) { side = 'bottom'; y = r.bottom + 10; }
+      let x = r.left + r.width / 2;
+      // clamp horizontally
+      const halfW = (helpMode ? 175 : 135);
+      if (x - halfW < 10) x = halfW + 10;
+      if (x + halfW > window.innerWidth - 10) x = window.innerWidth - halfW - 10;
+      setCoords({ x, y, side });
+      setShow(true);
+    }, delay);
+  };
+  const handleLeave = () => {
+    if (timer.current) clearTimeout(timer.current);
+    setShow(false);
+  };
+
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  const text = helpMode && deepDesc ? deepDesc : desc;
+  const tipStyle = {
+    left: coords.x,
+    top: coords.y,
+    '--tip-from': coords.side === 'top'
+      ? 'translate(-50%, calc(-100% + 4px))'
+      : 'translateX(-50%) translateY(-4px)',
+    '--tip-to': coords.side === 'top'
+      ? 'translate(-50%, -100%)'
+      : 'translateX(-50%) translateY(0)',
+    transform: coords.side === 'top' ? 'translate(-50%, -100%)' : 'translateX(-50%)',
+  };
+
+  return (
+    <>
+      <span
+        ref={wrapRef}
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+        onMouseDown={handleLeave}
+        style={{ display: 'inline-flex', alignItems: 'center' }}
+      >
+        {children}
+      </span>
+      {show && ReactDOM.createPortal(
+        <div className={`tip ${helpMode ? 'help-mode' : ''}`} style={tipStyle} role="tooltip">
+          {label && <div className="tip-label">{label}</div>}
+          {text && <div className="tip-desc">{text}</div>}
+          {example && helpMode && <div className="tip-example">{example}</div>}
+          {shortcut && (
+            <div className="tip-shortcut">
+              {shortcut.split('+').map((k, i, arr) => (
+                <React.Fragment key={i}>
+                  {i > 0 && ' + '}
+                  <kbd>{k}</kbd>
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+};
+
+// ============================================================
+// FORMATTING HELPERS
+// ============================================================
+const isSceneStart = (text) => {
+  const t = text.trim().toUpperCase();
+  return SCENE_PREFIXES.some(p => t.startsWith(p));
+};
+const isTransitionText = (text) => {
+  const t = text.trim().toUpperCase();
+  if (!t) return false;
+  return TRANSITIONS.some(tr => t === tr) || (t === t.toUpperCase() && t.endsWith('TO:') && t.length < 30);
+};
+const looksLikeCharacterName = (text) => {
+  const t = text.trim();
+  if (!t || t.length > 40) return false;
+  if (t !== t.toUpperCase()) return false;
+  if (/[a-z]/.test(t)) return false;
+  return /^[A-Z0-9 .'\-#]+(\s*\([^)]+\))?$/.test(t);
+};
+
+// next type when Enter is pressed inside current type
+const nextAfterEnter = (currentType) => {
+  switch (currentType) {
+    case 'scene_heading': return 'action';
+    case 'action': return 'action';
+    case 'character': return 'dialogue';
+    case 'parenthetical': return 'dialogue';
+    case 'dialogue': return 'action';
+    case 'transition': return 'scene_heading';
+    case 'shot': return 'action';
+    default: return 'action';
+  }
+};
+
+// Tab cycles to a contextual next type
+const tabCycle = (currentType) => {
+  switch (currentType) {
+    case 'action': return 'character';
+    case 'character': return 'action';
+    case 'dialogue': return 'parenthetical';
+    case 'parenthetical': return 'dialogue';
+    case 'scene_heading': return 'action';
+    case 'transition': return 'scene_heading';
+    case 'shot': return 'action';
+    default: return 'action';
+  }
+};
+
+// extract a clean character name (strip parenthetical modifiers like (V.O.))
+const cleanCharName = (text) => {
+  return text.replace(/\s*\([^)]*\)\s*/g, '').trim().toUpperCase();
+};
+
+// estimate page count: ~55 lines/page, 60 chars per line; collapse using element heights
+const estimatePages = (elements) => {
+  let lines = 0;
+  for (const el of elements) {
+    const t = el.text || '';
+    let width = 60;
+    if (el.type === 'dialogue') width = 33;
+    else if (el.type === 'parenthetical') width = 25;
+    else if (el.type === 'character') width = 38;
+    const wrapped = Math.max(1, Math.ceil(t.length / width));
+    lines += wrapped;
+    if (['scene_heading','character','transition'].includes(el.type)) lines += 1; // blank line before
+  }
+  return Math.max(1, Math.ceil(lines / 55));
+};
+
+const countWords = (elements) => {
+  return elements.reduce((acc, el) => {
+    const words = (el.text || '').trim().split(/\s+/).filter(Boolean);
+    return acc + words.length;
+  }, 0);
+};
+
+// ============================================================
+// EXPORTERS
+// ============================================================
+const exportFountain = (doc) => {
+  let out = '';
+  if (doc.title) out += `Title: ${doc.title}\n`;
+  if (doc.author) out += `Author: ${doc.author}\n`;
+  if (doc.draftDate) out += `Draft date: ${doc.draftDate}\n`;
+  if (doc.contact) out += `Contact: ${doc.contact}\n`;
+  if (out) out += '\n';
+
+  let prevType = null;
+  for (const el of doc.elements) {
+    const t = (el.text || '').trim();
+    if (!t) { prevType = el.type; out += '\n'; continue; }
+    switch (el.type) {
+      case 'scene_heading':
+        if (prevType) out += '\n';
+        if (!isSceneStart(t)) out += '.' + t.toUpperCase() + '\n';
+        else out += t.toUpperCase() + '\n';
+        break;
+      case 'action':
+        if (prevType && prevType !== 'action') out += '\n';
+        out += t + '\n';
+        break;
+      case 'character':
+        out += '\n' + cleanCharName(t) + (t.match(/\([^)]+\)/)?.[0] ? ' ' + t.match(/\([^)]+\)/)[0] : '') + '\n';
+        break;
+      case 'parenthetical':
+        out += (t.startsWith('(') ? t : `(${t})`) + '\n';
+        break;
+      case 'dialogue':
+        out += t + '\n';
+        break;
+      case 'transition':
+        out += '\n> ' + t.toUpperCase() + '\n';
+        break;
+      case 'shot':
+        out += '\n' + t.toUpperCase() + '\n';
+        break;
+    }
+    prevType = el.type;
+  }
+  return out;
+};
+
+const exportPlainText = (doc) => {
+  let out = '';
+  out += (doc.title || 'UNTITLED').toUpperCase() + '\n';
+  if (doc.author) out += `by ${doc.author}\n`;
+  out += '\n\n';
+  for (const el of doc.elements) {
+    const t = (el.text || '');
+    if (!t.trim()) { out += '\n'; continue; }
+    switch (el.type) {
+      case 'scene_heading': out += '\n' + t.toUpperCase() + '\n\n'; break;
+      case 'action': out += t + '\n\n'; break;
+      case 'character': out += '\n' + ' '.repeat(22) + t.toUpperCase() + '\n'; break;
+      case 'parenthetical': out += ' '.repeat(16) + (t.startsWith('(') ? t : `(${t})`) + '\n'; break;
+      case 'dialogue': out += ' '.repeat(10) + t + '\n'; break;
+      case 'transition': out += '\n' + ' '.repeat(50) + t.toUpperCase() + '\n\n'; break;
+      case 'shot': out += '\n' + t.toUpperCase() + '\n\n'; break;
+    }
+  }
+  return out;
+};
+
+const downloadFile = (filename, content, mime = 'text/plain') => {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+};
+
+const exportPDF = (doc) => {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait' });
+  pdf.setFont('courier', 'normal');
+  pdf.setFontSize(12);
+
+  // Title page
+  const cx = 4.25;
+  pdf.setFontSize(18);
+  pdf.setFont('courier', 'bold');
+  const titleY = 4.5;
+  pdf.text((doc.title || 'UNTITLED').toUpperCase(), cx, titleY, { align: 'center' });
+  pdf.setFont('courier', 'normal');
+  pdf.setFontSize(12);
+  if (doc.author) {
+    pdf.text('written by', cx, titleY + 0.8, { align: 'center' });
+    pdf.text(doc.author, cx, titleY + 1.1, { align: 'center' });
+  }
+  if (doc.contact) {
+    const lines = pdf.splitTextToSize(doc.contact, 3);
+    pdf.text(lines, 1, 10);
+  }
+  if (doc.draftDate) {
+    pdf.text(doc.draftDate, 7.5, 10, { align: 'right' });
+  }
+
+  pdf.addPage();
+  let y = 1.0;
+  const PAGE_TOP = 1.0;
+  const PAGE_BOTTOM = 10.0;
+  const LEFT = 1.5;
+  const RIGHT_EDGE = 7.5;
+  const LINE_H = 12 / 72; // ~0.167 in
+  let pageNumber = 1;
+
+  const addPageNumber = () => {
+    pdf.setFontSize(12);
+    pdf.text(`${pageNumber}.`, RIGHT_EDGE, 0.6, { align: 'right' });
+  };
+  addPageNumber();
+
+  const ensureRoom = (lines) => {
+    if (y + lines * LINE_H > PAGE_BOTTOM) {
+      pdf.addPage();
+      pageNumber++;
+      y = PAGE_TOP;
+      addPageNumber();
+    }
+  };
+
+  const writeBlock = (text, indent, width, opts = {}) => {
+    if (!text || !text.trim()) return;
+    const lines = pdf.splitTextToSize(text, width);
+    ensureRoom(lines.length + (opts.topMargin ? 1 : 0));
+    if (opts.topMargin) y += LINE_H;
+    for (const ln of lines) {
+      if (opts.align === 'right') {
+        pdf.text(ln, indent + width, y, { align: 'right' });
+      } else {
+        pdf.text(ln, indent, y);
+      }
+      y += LINE_H;
+    }
+  };
+
+  for (const el of doc.elements) {
+    const t = (el.text || '').trim();
+    if (!t) continue;
+    switch (el.type) {
+      case 'scene_heading':
+        pdf.setFont('courier', 'bold');
+        writeBlock(t.toUpperCase(), LEFT, 6, { topMargin: true });
+        pdf.setFont('courier', 'normal');
+        break;
+      case 'action':
+        writeBlock(t, LEFT, 6, { topMargin: true });
+        break;
+      case 'character':
+        writeBlock(t.toUpperCase(), LEFT + 2.2, 3.5, { topMargin: true });
+        break;
+      case 'parenthetical':
+        writeBlock(t.startsWith('(') ? t : `(${t})`, LEFT + 1.6, 2.5);
+        break;
+      case 'dialogue':
+        writeBlock(t, LEFT + 1.0, 3.5);
+        break;
+      case 'transition':
+        writeBlock(t.toUpperCase(), LEFT, 6, { topMargin: true, align: 'right' });
+        break;
+      case 'shot':
+        pdf.setFont('courier', 'bold');
+        writeBlock(t.toUpperCase(), LEFT, 6, { topMargin: true });
+        pdf.setFont('courier', 'normal');
+        break;
+    }
+  }
+
+  pdf.save(`${(doc.title || 'screenplay').replace(/[^\w]+/g,'_').toLowerCase()}.pdf`);
+};
+
+// ============================================================
+// CLAUDE API
+// ============================================================
+const callClaude = async (apiKey, messages, system) => {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-7',
+      max_tokens: 1600,
+      system,
+      messages,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Anthropic API error (${res.status})`);
+  }
+  const data = await res.json();
+  return data.content?.map(b => b.text).join('') || '';
+};
+
+// ============================================================
+// SCREENPLAY ELEMENT (one row)
+// ============================================================
+const ScreenplayElement = React.memo(function ScreenplayElement({
+  el, isFocused, onChange, onKeyDown, onFocus, onBlur, registerRef, characters
+}) {
+  const ref = useRef(null);
+  const [autocomplete, setAutocomplete] = useState(null); // {options, index}
+
+  useLayoutEffect(() => {
+    if (ref.current) {
+      registerRef(el.id, ref.current);
+      // auto-resize
+      ref.current.style.height = 'auto';
+      ref.current.style.height = ref.current.scrollHeight + 'px';
+    }
+  }, [el.text, el.type, el.id, registerRef]);
+
+  const handleChange = (e) => {
+    onChange(el.id, e.target.value);
+    // autocomplete for characters / scene prefixes
+    const v = e.target.value;
+    if (el.type === 'character' && v.length >= 1 && v.length < 30) {
+      const upper = v.toUpperCase();
+      const matches = characters.filter(c => c.startsWith(upper) && c !== upper).slice(0, 5);
+      setAutocomplete(matches.length ? { options: matches, index: 0 } : null);
+    } else if (el.type === 'scene_heading' && v.length >= 1 && v.length <= 3) {
+      const upper = v.toUpperCase();
+      const matches = SCENE_PREFIXES.filter(p => p.startsWith(upper)).slice(0, 4);
+      setAutocomplete(matches.length && upper !== matches[0] ? { options: matches.map(p => p + ' '), index: 0 } : null);
+    } else if (el.type === 'transition') {
+      const upper = v.toUpperCase();
+      const matches = TRANSITIONS.filter(t => t.startsWith(upper) && t !== upper).slice(0, 4);
+      setAutocomplete(matches.length ? { options: matches, index: 0 } : null);
+    } else {
+      setAutocomplete(null);
+    }
+  };
+
+  const applyAutocomplete = (value) => {
+    onChange(el.id, value);
+    setAutocomplete(null);
+    setTimeout(() => {
+      if (ref.current) {
+        ref.current.focus();
+        ref.current.setSelectionRange(value.length, value.length);
+      }
+    }, 0);
+  };
+
+  const handleKey = (e) => {
+    if (autocomplete) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setAutocomplete({ ...autocomplete, index: (autocomplete.index + 1) % autocomplete.options.length });
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setAutocomplete({ ...autocomplete, index: (autocomplete.index - 1 + autocomplete.options.length) % autocomplete.options.length });
+        return;
+      }
+      if (e.key === 'Tab' || (e.key === 'Enter' && e.shiftKey === false && autocomplete.index >= 0)) {
+        // only consume Enter if the user explicitly invoked it as a selection;
+        // we'll let Tab always accept, but Enter still creates next line unless autocomplete shown AND user wants it.
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          applyAutocomplete(autocomplete.options[autocomplete.index]);
+          return;
+        }
+      }
+      if (e.key === 'Escape') {
+        setAutocomplete(null);
+        return;
+      }
+    }
+    onKeyDown(el.id, e);
+  };
+
+  const typeInfo = ELEMENT_TYPES[el.type];
+
+  return (
+    <div className={`el ${el.type}`}>
+      <span className="el-label">{typeInfo.label}</span>
+      <textarea
+        ref={ref}
+        className="el-textarea"
+        value={el.text}
+        rows={1}
+        spellCheck={true}
+        placeholder={typeInfo.placeholder}
+        onChange={handleChange}
+        onKeyDown={handleKey}
+        onFocus={() => onFocus(el.id)}
+        onBlur={() => { onBlur(el.id); setTimeout(() => setAutocomplete(null), 100); }}
+      />
+      {autocomplete && (
+        <div className="autocomplete" style={{ top: '100%', left: el.type === 'character' ? 'calc(22ch)' : (el.type === 'transition' ? 'auto' : 0), right: el.type === 'transition' ? 0 : 'auto' }}>
+          {autocomplete.options.map((opt, i) => (
+            <button
+              key={opt}
+              className={i === autocomplete.index ? 'selected' : ''}
+              onMouseDown={(ev) => { ev.preventDefault(); applyAutocomplete(opt); }}
+            >{opt}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+// ============================================================
+// MAIN APP
+// ============================================================
+function App() {
+  const [doc, setDoc] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_DOC;
+  });
+  const [focusedId, setFocusedId] = useState(null);
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
+  const [rightTab, setRightTab] = useState('ai'); // 'characters' | 'ai'
+  const [view, setView] = useState('script'); // 'script' | 'title'
+  const [saveStatus, setSaveStatus] = useState('saved'); // 'saving' | 'saved'
+  const [exportMenu, setExportMenu] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem(KEY_STORAGE) || '');
+  const [helpMode, setHelpMode] = useState(false);
+
+  // AI conversation
+  const [aiMessages, setAiMessages] = useState([]);
+  const [aiInput, setAiInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
+  const elementRefs = useRef({});
+  const registerRef = useCallback((id, node) => { elementRefs.current[id] = node; }, []);
+  const saveTimer = useRef(null);
+  const idCounter = useRef(Math.max(0, ...doc.elements.map(e => e.id)) + 1);
+  const editorScrollRef = useRef(null);
+
+  // ---------- autosave ----------
+  useEffect(() => {
+    setSaveStatus('saving');
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(doc)); } catch {}
+      setSaveStatus('saved');
+    }, 400);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [doc]);
+
+  // ---------- derived ----------
+  const scenes = useMemo(() => {
+    return doc.elements
+      .map((el, idx) => ({ ...el, idx }))
+      .filter(e => e.type === 'scene_heading');
+  }, [doc.elements]);
+
+  const characters = useMemo(() => {
+    const map = new Map();
+    for (const el of doc.elements) {
+      if (el.type === 'character') {
+        const name = cleanCharName(el.text);
+        if (!name) continue;
+        map.set(name, (map.get(name) || 0) + 1);
+      }
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }));
+  }, [doc.elements]);
+
+  const wordCount = useMemo(() => countWords(doc.elements), [doc.elements]);
+  const pageCount = useMemo(() => estimatePages(doc.elements), [doc.elements]);
+
+  // ---------- element ops ----------
+  const newId = () => idCounter.current++;
+
+  const updateElement = useCallback((id, text) => {
+    setDoc(d => {
+      const elements = d.elements.map(el => {
+        if (el.id !== id) return el;
+        let next = { ...el, text };
+        // auto-detect scene heading from action
+        if (el.type === 'action' && isSceneStart(text)) {
+          next.type = 'scene_heading';
+          next.text = text.toUpperCase();
+        }
+        // auto-detect transition from action ending in TO:
+        else if (el.type === 'action' && isTransitionText(text)) {
+          next.type = 'transition';
+          next.text = text.toUpperCase();
+        }
+        // dialogue beginning with '(' on its own — promote to parenthetical
+        else if (el.type === 'dialogue' && text.startsWith('(') && !text.includes('\n')) {
+          next.type = 'parenthetical';
+        }
+        return next;
+      });
+      return { ...d, elements };
+    });
+  }, []);
+
+  const changeType = useCallback((id, type) => {
+    setDoc(d => ({
+      ...d,
+      elements: d.elements.map(el => el.id === id ? { ...el, type } : el),
+    }));
+  }, []);
+
+  const insertAfter = useCallback((id, type, text = '') => {
+    const fresh = { id: newId(), type, text };
+    setDoc(d => {
+      const idx = d.elements.findIndex(e => e.id === id);
+      const next = [...d.elements];
+      next.splice(idx + 1, 0, fresh);
+      return { ...d, elements: next };
+    });
+    setTimeout(() => {
+      const node = elementRefs.current[fresh.id];
+      if (node) node.focus();
+    }, 0);
+    return fresh.id;
+  }, []);
+
+  const removeElement = useCallback((id) => {
+    setDoc(d => {
+      if (d.elements.length <= 1) return d;
+      const idx = d.elements.findIndex(e => e.id === id);
+      const next = d.elements.filter(e => e.id !== id);
+      const focusIdx = Math.max(0, idx - 1);
+      setTimeout(() => {
+        const target = next[focusIdx];
+        if (target) {
+          const node = elementRefs.current[target.id];
+          if (node) {
+            node.focus();
+            node.setSelectionRange(node.value.length, node.value.length);
+          }
+        }
+      }, 0);
+      return { ...d, elements: next };
+    });
+  }, []);
+
+  // ---------- keyboard handling ----------
+  const handleKeyDown = useCallback((id, e) => {
+    const node = e.target;
+    const el = doc.elements.find(x => x.id === id);
+    if (!el) return;
+
+    // Cmd/Ctrl shortcuts for element types
+    if (e.metaKey || e.ctrlKey) {
+      const map = { '1': 'scene_heading', '2': 'action', '3': 'character', '4': 'dialogue', '5': 'parenthetical', '6': 'transition', '7': 'shot' };
+      if (map[e.key]) {
+        e.preventDefault();
+        changeType(id, map[e.key]);
+        return;
+      }
+      if (e.key === 's') {
+        e.preventDefault();
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(doc)); } catch {}
+        setSaveStatus('saved');
+        return;
+      }
+    }
+
+    // Enter
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const nextType = nextAfterEnter(el.type);
+      insertAfter(id, nextType, '');
+      return;
+    }
+
+    // Tab — cycle type
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const next = e.shiftKey
+        ? (ELEMENT_ORDER[(ELEMENT_ORDER.indexOf(el.type) - 1 + ELEMENT_ORDER.length) % ELEMENT_ORDER.length])
+        : tabCycle(el.type);
+      changeType(id, next);
+      return;
+    }
+
+    // Backspace at empty element → delete element and focus previous
+    if (e.key === 'Backspace' && node.value === '') {
+      e.preventDefault();
+      removeElement(id);
+      return;
+    }
+
+    // ArrowUp at line 0 → previous element
+    if (e.key === 'ArrowUp') {
+      const before = node.value.slice(0, node.selectionStart);
+      if (!before.includes('\n')) {
+        const idx = doc.elements.findIndex(x => x.id === id);
+        if (idx > 0) {
+          e.preventDefault();
+          const prev = doc.elements[idx - 1];
+          const pnode = elementRefs.current[prev.id];
+          if (pnode) {
+            pnode.focus();
+            pnode.setSelectionRange(pnode.value.length, pnode.value.length);
+          }
+        }
+      }
+    }
+    // ArrowDown at last line → next element
+    if (e.key === 'ArrowDown') {
+      const after = node.value.slice(node.selectionStart);
+      if (!after.includes('\n')) {
+        const idx = doc.elements.findIndex(x => x.id === id);
+        if (idx < doc.elements.length - 1) {
+          e.preventDefault();
+          const nx = doc.elements[idx + 1];
+          const nn = elementRefs.current[nx.id];
+          if (nn) {
+            nn.focus();
+            nn.setSelectionRange(0, 0);
+          }
+        }
+      }
+    }
+  }, [doc, changeType, insertAfter, removeElement]);
+
+  // ---------- scene navigation ----------
+  const jumpToScene = (id) => {
+    const node = elementRefs.current[id];
+    if (node) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => node.focus(), 250);
+    }
+  };
+
+  // ---------- AI helpers ----------
+  const saveApiKey = (k) => {
+    setApiKey(k);
+    try { localStorage.setItem(KEY_STORAGE, k); } catch {}
+  };
+
+  // build current-scene context
+  const currentScene = useMemo(() => {
+    if (!focusedId) return null;
+    const idx = doc.elements.findIndex(e => e.id === focusedId);
+    if (idx === -1) return null;
+    let start = idx;
+    while (start > 0 && doc.elements[start].type !== 'scene_heading') start--;
+    let end = idx;
+    while (end < doc.elements.length - 1 && doc.elements[end + 1].type !== 'scene_heading') end++;
+    return { start, end, elements: doc.elements.slice(start, end + 1) };
+  }, [focusedId, doc.elements]);
+
+  const sceneToText = (scene) => {
+    if (!scene) return '(no scene)';
+    return scene.elements.map(el => {
+      switch (el.type) {
+        case 'scene_heading': return el.text.toUpperCase();
+        case 'action': return el.text;
+        case 'character': return '\n' + ' '.repeat(22) + el.text.toUpperCase();
+        case 'parenthetical': return ' '.repeat(16) + (el.text.startsWith('(') ? el.text : `(${el.text})`);
+        case 'dialogue': return ' '.repeat(10) + el.text;
+        case 'transition': return '\n' + ' '.repeat(50) + el.text.toUpperCase();
+        case 'shot': return '\n' + el.text.toUpperCase();
+        default: return el.text;
+      }
+    }).join('\n');
+  };
+
+  const SYSTEM_PROMPT = `You are a master screenwriter — an elite collaborator embedded in a professional screenplay editor. You have read every Aaron Sorkin, Charlie Kaufman, Tony Gilroy, and Greta Gerwig script. You write with economy, specificity, subtext, and cinematic instinct. You honor the screenwriter's voice — never homogenize it.
+
+When you respond:
+- Match the existing tone and character voice exactly.
+- Format any new screenplay text in industry-standard Fountain:
+  - Scene headings: INT. LOCATION - TIME (all caps, on their own line)
+  - Action: present tense, vivid, sparse
+  - Character cues: NAME in all caps on its own line
+  - Parentheticals on their own line, like (beat) — use sparingly
+  - Dialogue indented below the character name
+- Never explain craft unless asked. Never repeat existing lines.
+- Notes: be specific, actionable, ruthless. No fluff.
+- If asked to write, deliver complete, production-ready text.`;
+
+  const sendAI = async (userMessage, opts = {}) => {
+    if (!apiKey) {
+      setAiError('Add your Anthropic API key in Settings to use the AI assistant. (Or copy a prompt to ask Claude directly.)');
+      return;
+    }
+    setAiError(null);
+    setAiLoading(true);
+    const history = [...aiMessages, { role: 'user', content: userMessage }];
+    setAiMessages(history);
+    try {
+      const reply = await callClaude(apiKey, history.map(m => ({ role: m.role, content: m.content })), SYSTEM_PROMPT);
+      setAiMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+    } catch (err) {
+      setAiError(err.message || 'Request failed');
+      setAiMessages(prev => prev.slice(0, -1));
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const buildContextHeader = () => {
+    const sceneText = currentScene ? sceneToText(currentScene) : '(no current scene)';
+    return `# Project: ${doc.title || 'Untitled'}\n${doc.author ? `Writer: ${doc.author}\n` : ''}Characters in play: ${characters.slice(0, 12).map(c => c.name).join(', ') || 'none yet'}\n\n# Current scene\n\n${sceneText}\n\n`;
+  };
+
+  const aiPreset = (kind) => {
+    const ctx = buildContextHeader();
+    let task = '';
+    switch (kind) {
+      case 'next_line':
+        task = `Write the next line of dialogue or action that should follow the current scene. Match voice and tone exactly. Use Fountain format. Deliver only the new lines, no commentary.`;
+        break;
+      case 'finish_scene':
+        task = `Continue and finish this scene — bring it to a clean dramatic close. Use Fountain format. Maintain established voices. Don't repeat existing lines.`;
+        break;
+      case 'punch_up':
+        task = `Punch up the dialogue in this scene. Sharper, more specific, more subtext — without losing the writer's voice. Return only the rewritten character/dialogue blocks in Fountain format.`;
+        break;
+      case 'notes':
+        task = `Give me ruthless professional notes on this scene. What works, what doesn't, what to cut, what's missing. Be brief and specific.`;
+        break;
+      case 'fix_format':
+        task = `Identify any formatting issues in this scene (mis-classified element types, missing slug lines, parentheticals overused, etc.). Be concrete.`;
+        break;
+      case 'beat_options':
+        task = `Suggest 3 different directions this scene could go next, each one sentence. No fluff.`;
+        break;
+      case 'character_voice':
+        task = `Analyze the voice of each character speaking in this scene. One sentence per character. Then suggest one line each character would never say, to sharpen what they would.`;
+        break;
+      case 'logline':
+        task = `Read the full script and write a single-sentence logline that captures its premise and conflict.`;
+        break;
+    }
+    let payload = ctx + '## Task\n\n' + task;
+    if (kind === 'logline') {
+      payload = `# Project: ${doc.title || 'Untitled'}\n\n# Full script (excerpt, current state)\n\n${exportPlainText(doc).slice(0, 8000)}\n\n## Task\n\n${task}`;
+    }
+    sendAI(payload);
+  };
+
+  const insertAIResponse = (content) => {
+    // parse fountain-ish text and insert as elements after focused element (or at end)
+    const lines = content.split('\n');
+    const parsed = [];
+    let lastWasBlank = true;
+    for (let i = 0; i < lines.length; i++) {
+      const raw = lines[i];
+      const line = raw.trim();
+      if (!line) { lastWasBlank = true; continue; }
+
+      if (/^(INT\.|EXT\.|INT\/EXT|I\/E|EST\.)/i.test(line)) {
+        parsed.push({ type: 'scene_heading', text: line.toUpperCase() });
+        lastWasBlank = false;
+        continue;
+      }
+      if (line.startsWith('.') && line.length > 1) {
+        parsed.push({ type: 'scene_heading', text: line.slice(1).toUpperCase() });
+        lastWasBlank = false;
+        continue;
+      }
+      if (line.startsWith('>')) {
+        parsed.push({ type: 'transition', text: line.slice(1).trim().toUpperCase() });
+        lastWasBlank = false;
+        continue;
+      }
+      if (line.startsWith('(') && line.endsWith(')')) {
+        parsed.push({ type: 'parenthetical', text: line });
+        lastWasBlank = false;
+        continue;
+      }
+      if (looksLikeCharacterName(line) && lastWasBlank) {
+        parsed.push({ type: 'character', text: line.toUpperCase() });
+        lastWasBlank = false;
+        continue;
+      }
+      // dialogue if previous parsed is character / parenthetical / dialogue
+      const prev = parsed[parsed.length - 1];
+      if (prev && (prev.type === 'character' || prev.type === 'parenthetical' || prev.type === 'dialogue')) {
+        parsed.push({ type: 'dialogue', text: line });
+        lastWasBlank = false;
+        continue;
+      }
+      parsed.push({ type: 'action', text: line });
+      lastWasBlank = false;
+    }
+    if (!parsed.length) return;
+
+    setDoc(d => {
+      let insertIdx = d.elements.length;
+      if (focusedId) {
+        const idx = d.elements.findIndex(e => e.id === focusedId);
+        if (idx >= 0) insertIdx = idx + 1;
+      }
+      const fresh = parsed.map(p => ({ id: newId(), ...p }));
+      const next = [...d.elements];
+      next.splice(insertIdx, 0, ...fresh);
+      return { ...d, elements: next };
+    });
+  };
+
+  // ---------- title / new ----------
+  const newScript = () => {
+    if (!confirm('Start a new screenplay? This will discard the current draft (if not exported).')) return;
+    idCounter.current = 100;
+    setDoc({
+      title: 'UNTITLED',
+      author: doc.author || '',
+      contact: doc.contact || '',
+      draftDate: '',
+      elements: [
+        { id: idCounter.current++, type: 'scene_heading', text: '' },
+      ],
+    });
+    setAiMessages([]);
+  };
+
+  // close export menu on outside click
+  useEffect(() => {
+    if (!exportMenu) return;
+    const handler = (e) => {
+      if (!e.target.closest('.menu-wrap')) setExportMenu(false);
+    };
+    window.addEventListener('mousedown', handler);
+    return () => window.removeEventListener('mousedown', handler);
+  }, [exportMenu]);
+
+  // current element type for toolbar
+  const focusedType = useMemo(() => {
+    if (!focusedId) return null;
+    return doc.elements.find(e => e.id === focusedId)?.type || null;
+  }, [focusedId, doc.elements]);
+
+  // ============================================================
+  // RENDER
+  // ============================================================
+  return (
+    <TipContext.Provider value={{ helpMode }}>
+    <div className="app">
+
+      {/* ============ LEFT SIDEBAR ============ */}
+      <aside className={`sidebar ${leftOpen ? '' : 'collapsed'}`}>
+        <div className="sidebar-header">
+          <span className="sidebar-title">Scenes</span>
+          <span style={{ color: 'var(--text-3)', fontSize: 11 }}>{scenes.length}</span>
+        </div>
+        <div className="list">
+          {scenes.length === 0 && (
+            <div className="empty">No scenes yet. Type <code style={{color:'var(--accent)'}}>INT.</code> or <code style={{color:'var(--accent)'}}>EXT.</code> at the start of a line.</div>
+          )}
+          {scenes.map((s, i) => (
+            <div
+              key={s.id}
+              className={`scene-row ${focusedId === s.id ? 'active' : ''}`}
+              onClick={() => jumpToScene(s.id)}
+            >
+              <span className="scene-num">{i + 1}.</span>
+              <span className="scene-text">{s.text || '(untitled scene)'}</span>
+            </div>
+          ))}
+        </div>
+      </aside>
+
+      {/* ============ MAIN ============ */}
+      <main className="main">
+
+        {/* ---- top bar ---- */}
+        <div className="topbar">
+          <Tip
+            label={leftOpen ? 'Hide scene list' : 'Show scene list'}
+            desc="Toggles the left panel showing every scene in your script."
+            deepDesc="Toggles the left-hand panel listing every numbered scene in your screenplay. Click a scene in that panel to jump straight to it. Hiding the panel gives the page more breathing room when you're deep in writing."
+          >
+            <button className="btn icon ghost" onClick={() => setLeftOpen(o => !o)}>
+              <Icon name={leftOpen ? 'chevronLeft' : 'chevronRight'} />
+            </button>
+          </Tip>
+
+          <input
+            className="title-input"
+            value={doc.title}
+            placeholder="Untitled Screenplay"
+            title="Screenplay title — appears on the title page and used as the export filename. Auto-saves as you type."
+            onChange={e => setDoc(d => ({ ...d, title: e.target.value }))}
+          />
+
+          <div style={{ flex: 1 }} />
+
+          <Tip
+            label="Page count"
+            desc="Estimated page count (1 page ≈ 1 minute of screen time)."
+            deepDesc="An estimate of how many pages your screenplay would occupy when exported to PDF using industry-standard Courier 12pt formatting. As a rough rule of thumb, one screenplay page equals roughly one minute of finished screen time."
+          >
+            <div className="stat"><Icon name="file" size={13} /><span className="stat-value">{pageCount}</span><span>pg</span></div>
+          </Tip>
+          <div className="stat-divider" />
+          <Tip
+            label="Word count"
+            desc="Total words across every element in your script."
+            deepDesc="Counts every word across every element — action, dialogue, scene headings, parentheticals, transitions. Updates live as you type."
+          >
+            <div className="stat"><span className="stat-value">{wordCount.toLocaleString()}</span><span>words</span></div>
+          </Tip>
+          <div className="stat-divider" />
+          <Tip
+            label="Auto-save"
+            desc="Your script is saved to your browser every time you stop typing."
+            deepDesc="Every change you make is auto-saved to your browser's localStorage about half a second after you stop typing. The dot turns gold while saving and green when saved. To make a portable backup, use Export → Backup (JSON)."
+          >
+            <div className="save-indicator">
+              <span className={`save-dot ${saveStatus === 'saving' ? 'saving' : ''}`} />
+              {saveStatus === 'saving' ? 'Saving…' : 'Saved'}
+            </div>
+          </Tip>
+
+          <div style={{ width: 8 }} />
+
+          <Tip
+            label="Title page"
+            desc="Switch to the title page editor (title, author, contact, draft date)."
+            deepDesc="Switches the main view to the title page editor where you can set the screenplay's title, author name, contact info, and draft date. These appear at the top of your exported PDF. Click again to return to the script."
+          >
+            <button className={`btn ghost ${view === 'title' ? 'active' : ''}`} onClick={() => setView(v => v === 'title' ? 'script' : 'title')}>
+              <Icon name="title" /> Title
+            </button>
+          </Tip>
+
+          <div className="menu-wrap">
+            <Tip
+              label="Export"
+              desc="Export to PDF, Fountain, plain text, or back up as JSON."
+              deepDesc="Open the export menu. PDF gives you the industry-standard typeset script. Fountain is the open plaintext format readable by Final Draft, Highland, WriterDuet, etc. Plain text is a simple readable copy. The JSON Backup option lets you save the full editor state and re-import it later or on another machine."
+            >
+              <button className="btn" onClick={() => setExportMenu(m => !m)}>
+                <Icon name="download" /> Export
+              </button>
+            </Tip>
+            {exportMenu && (
+              <div className="menu">
+                <button onClick={() => { exportPDF(doc); setExportMenu(false); }}>
+                  <Icon name="file" size={14} /> Export PDF
+                </button>
+                <button onClick={() => { downloadFile(`${doc.title || 'screenplay'}.fountain`, exportFountain(doc)); setExportMenu(false); }}>
+                  <Icon name="file" size={14} /> Export Fountain
+                </button>
+                <button onClick={() => { downloadFile(`${doc.title || 'screenplay'}.txt`, exportPlainText(doc)); setExportMenu(false); }}>
+                  <Icon name="file" size={14} /> Export Plain Text
+                </button>
+                <div className="sep" />
+                <button onClick={() => { downloadFile(`${doc.title || 'screenplay'}.json`, JSON.stringify(doc, null, 2), 'application/json'); setExportMenu(false); }}>
+                  <Icon name="save" size={14} /> Backup (JSON)
+                </button>
+                <button onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file'; input.accept = '.json';
+                  input.onchange = (e) => {
+                    const f = e.target.files[0]; if (!f) return;
+                    const r = new FileReader();
+                    r.onload = () => {
+                      try { setDoc(JSON.parse(r.result)); } catch { alert('Invalid backup file.'); }
+                    };
+                    r.readAsText(f);
+                  };
+                  input.click();
+                  setExportMenu(false);
+                }}>
+                  <Icon name="download" size={14} /> Import Backup
+                </button>
+                <div className="sep" />
+                <button onClick={() => { newScript(); setExportMenu(false); }}>
+                  <Icon name="plus" size={14} /> New Screenplay
+                </button>
+              </div>
+            )}
+          </div>
+
+          <Tip
+            label={helpMode ? 'Turn off Help mode' : 'Turn on Help mode'}
+            desc={helpMode
+              ? 'Help mode is ON — extended explanations are showing.'
+              : 'Hover any button to see a quick tooltip. Click this to switch on extended explanations.'}
+            deepDesc={helpMode
+              ? 'Help mode is currently ON. Every control in the editor is showing its extended explanation — including examples — when you hover. Click this button again to switch back to brief tooltips.'
+              : 'Turn on Help mode to make every hover tooltip show a longer, more detailed explanation — including examples for the formatting buttons. Great when you\'re learning the editor; turn it off again once you\'re comfortable.'}
+          >
+            <button
+              className={`btn icon ghost ${helpMode ? 'help-pulse' : ''}`}
+              style={helpMode ? { color: 'var(--accent)', borderColor: 'var(--accent)', background: 'var(--accent-soft)' } : {}}
+              onClick={() => setHelpMode(h => !h)}
+            >
+              <Icon name="help" />
+            </button>
+          </Tip>
+
+          <Tip
+            label="Settings"
+            desc="Add your Anthropic API key, view shortcuts, or reset all local data."
+            deepDesc="Open the Settings panel. From here you can paste your Anthropic API key (required for the AI assistant), see the full keyboard shortcut reference, and — if you want to start fresh — wipe every screenplay and key stored in this browser."
+          >
+            <button className="btn icon ghost" onClick={() => setShowSettings(true)}>
+              <Icon name="settings" />
+            </button>
+          </Tip>
+
+          <Tip
+            label={rightOpen ? 'Hide right panel' : 'Show right panel'}
+            desc="Toggles the AI Assistant / Characters panel."
+            deepDesc="Toggles the right panel that contains the AI Assistant and the auto-detected Character list. Collapsing it gives the script page a wider feel; reopening it lets you talk to Claude or click any character to jump to their first line."
+          >
+            <button className="btn icon ghost" onClick={() => setRightOpen(o => !o)}>
+              <Icon name={rightOpen ? 'chevronRight' : 'chevronLeft'} />
+            </button>
+          </Tip>
+        </div>
+
+        {/* ---- format toolbar ---- */}
+        {view === 'script' && (
+          <div className="format-toolbar">
+            {ELEMENT_ORDER.map((t, i) => (
+              <Tip
+                key={t}
+                label={ELEMENT_TYPES[t].label}
+                desc={ELEMENT_HELP[t].desc}
+                deepDesc={ELEMENT_HELP[t].deep}
+                example={ELEMENT_HELP[t].example}
+                shortcut={`⌘+${i + 1}`}
+              >
+                <button
+                  className={`format-btn ${focusedType === t ? 'active' : ''}`}
+                  onClick={() => { if (focusedId) changeType(focusedId, t); }}
+                  disabled={!focusedId}
+                >
+                  {ELEMENT_TYPES[t].short}
+                  <span className="format-key">⌘{i + 1}</span>
+                </button>
+              </Tip>
+            ))}
+            <div style={{ flex: 1 }} />
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+              Enter ↵ next · Tab ⇥ cycle · ⌘1–7 set type
+            </span>
+          </div>
+        )}
+
+        {/* ---- editor / pages ---- */}
+        <div className="editor-scroll" ref={editorScrollRef}>
+          {view === 'title' && (
+            <div className="titlepage">
+              <input
+                className="tp-title"
+                value={doc.title}
+                placeholder="UNTITLED"
+                onChange={e => setDoc(d => ({ ...d, title: e.target.value }))}
+              />
+              <div className="tp-byline">
+                <div className="tp-by">written by</div>
+                <input
+                  className="tp-author"
+                  value={doc.author}
+                  placeholder="Author Name"
+                  onChange={e => setDoc(d => ({ ...d, author: e.target.value }))}
+                />
+              </div>
+              <div className="tp-contact">
+                <textarea
+                  value={doc.contact}
+                  placeholder="Contact info…&#10;Agent, email, phone"
+                  onChange={e => setDoc(d => ({ ...d, contact: e.target.value }))}
+                />
+                <input
+                  value={doc.draftDate}
+                  placeholder="Draft date (e.g. May 28, 2026)"
+                  onChange={e => setDoc(d => ({ ...d, draftDate: e.target.value }))}
+                  style={{ textAlign: 'right', marginTop: 10 }}
+                />
+              </div>
+            </div>
+          )}
+
+          {view === 'script' && (
+            <div className="page">
+              <div className="page-number">1.</div>
+              {doc.elements.map((el) => (
+                <ScreenplayElement
+                  key={el.id}
+                  el={el}
+                  isFocused={focusedId === el.id}
+                  onChange={updateElement}
+                  onKeyDown={handleKeyDown}
+                  onFocus={setFocusedId}
+                  onBlur={() => {}}
+                  registerRef={registerRef}
+                  characters={characters.map(c => c.name)}
+                />
+              ))}
+              {doc.elements.length === 0 && (
+                <div style={{ color: '#888', fontStyle: 'italic' }}>FADE IN:</div>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* ============ RIGHT SIDEBAR ============ */}
+      <aside className={`sidebar right ${rightOpen ? '' : 'collapsed'}`}>
+        <div className="tabs">
+          <Tip label="AI Assistant" desc="Talk to a screenwriting AI about your script." deepDesc="Switch to the AI Assistant tab — a built-in screenwriting collaborator powered by Claude. Use the preset buttons or write your own question; the current scene is auto-attached as context so the AI knows exactly what you're working on.">
+            <button className={`tab ${rightTab === 'ai' ? 'active' : ''}`} onClick={() => setRightTab('ai')}>AI Assistant</button>
+          </Tip>
+          <Tip label="Characters" desc="Every character in your script, ranked by line count." deepDesc="Switch to the Characters tab. The editor automatically detects every character cue in your script and lists them here, ranked by how many lines they speak. Click any name to jump straight to their first appearance.">
+            <button className={`tab ${rightTab === 'characters' ? 'active' : ''}`} onClick={() => setRightTab('characters')}>Characters</button>
+          </Tip>
+        </div>
+
+        {rightTab === 'characters' && (
+          <div className="list">
+            {characters.length === 0 && (
+              <div className="empty">Characters will appear here as you write. Press ⌘3 (or use Tab from an Action line) to insert a character cue.</div>
+            )}
+            {characters.map(c => (
+              <div key={c.name} className="char-row" onClick={() => {
+                // jump to first line for this character
+                const target = doc.elements.find(el => el.type === 'character' && cleanCharName(el.text) === c.name);
+                if (target) jumpToScene(target.id);
+              }}>
+                <div style={{ flex: 1 }}>
+                  <div className="char-name">{c.name}</div>
+                  <div className="char-meta">{c.count} {c.count === 1 ? 'line' : 'lines'}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {rightTab === 'ai' && (
+          <div className="ai-panel">
+            <div className="ai-presets">
+              <Tip label="Next line" desc="Suggest the next beat — action or dialogue — for the scene at your cursor." deepDesc="Asks the AI to write the very next line that should follow your current cursor position, matching the voice and tone you've already established. Result comes back in Fountain format; click Insert into script to drop it straight in.">
+                <button className="btn" onClick={() => aiPreset('next_line')}>Next line</button>
+              </Tip>
+              <Tip label="Finish scene" desc="Continue the current scene to a dramatic close." deepDesc="Asks the AI to continue and finish the scene you're currently in — bringing it to a natural dramatic close while preserving each character's voice. Great for breaking through a wall when you know where a scene should land but can't quite get there.">
+                <button className="btn" onClick={() => aiPreset('finish_scene')}>Finish scene</button>
+              </Tip>
+              <Tip label="Punch up dialogue" desc="Sharpen the dialogue in the current scene." deepDesc="Sends the current scene to the AI with instructions to sharpen every line — more specific, more subtext, less throat-clearing — without homogenising your voice. You'll get back rewritten character/dialogue blocks you can review and selectively insert.">
+                <button className="btn" onClick={() => aiPreset('punch_up')}>Punch up</button>
+              </Tip>
+              <Tip label="Pro notes" desc="Get ruthless professional notes on the current scene." deepDesc="Asks the AI to give development-exec-style notes on the current scene: what works, what doesn't, what to cut, what's missing. Honest and specific — no fluff, no smoke-blowing.">
+                <button className="btn" onClick={() => aiPreset('notes')}>Pro notes</button>
+              </Tip>
+              <Tip label="Format check" desc="Flag any formatting issues in this scene." deepDesc="Asks the AI to scan the current scene for mis-classified elements (an action that should be a slug, an overused parenthetical, a missing character cue, etc.) and suggest fixes. Useful when something feels off but you can't quite name it.">
+                <button className="btn" onClick={() => aiPreset('fix_format')}>Format check</button>
+              </Tip>
+              <Tip label="Beat options" desc="Three different directions this scene could go next." deepDesc="Asks the AI for three one-sentence options for where the scene could go next. A fast way to break through indecision when you can feel multiple paths but haven't committed to one.">
+                <button className="btn" onClick={() => aiPreset('beat_options')}>Beat options</button>
+              </Tip>
+              <Tip label="Voice check" desc="Analyse each character's voice in this scene." deepDesc="Asks the AI to summarise each character's distinct voice in one sentence each, then suggest a line each character would never say — a useful test for sharpening what they would say. Helps catch characters who are starting to sound the same.">
+                <button className="btn" onClick={() => aiPreset('character_voice')}>Voice check</button>
+              </Tip>
+              <Tip label="Logline" desc="Generate a single-sentence logline from the full script." deepDesc="Asks the AI to read everything you've written so far and distil it into a single sentence — the premise, the protagonist, the central conflict. Useful both as a creative compass and as marketing copy down the line.">
+                <button className="btn" onClick={() => aiPreset('logline')}>Logline</button>
+              </Tip>
+            </div>
+
+            <div className="ai-messages">
+              {aiMessages.length === 0 && !aiLoading && (
+                <div className="empty" style={{ padding: 24 }}>
+                  Ask anything about the scene at your cursor — request a line, get notes, brainstorm a beat. Use a preset above, or type below.
+                </div>
+              )}
+              {aiMessages.map((m, i) => (
+                <div key={i} className={`ai-msg ${m.role}`}>
+                  {m.content}
+                  {m.role === 'assistant' && (
+                    <div className="msg-actions">
+                      <Tip label="Copy reply" desc="Copy this AI reply to your clipboard." deepDesc="Copies the AI's reply to your clipboard as plain text — useful if you want to paste it into another app or share it.">
+                        <button onClick={() => navigator.clipboard.writeText(m.content)}>Copy</button>
+                      </Tip>
+                      <Tip label="Insert into script" desc="Parse the reply as Fountain and insert it into your screenplay." deepDesc="Parses the AI's reply as Fountain-format screenplay text and inserts the resulting elements directly into your script, right after your cursor position. Scene headings, character cues, dialogue and action are all recognised and formatted correctly.">
+                        <button onClick={() => insertAIResponse(m.content)}>Insert into script</button>
+                      </Tip>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {aiLoading && (
+                <div className="ai-msg assistant" style={{ opacity: 0.7 }}>
+                  Thinking…
+                </div>
+              )}
+              {aiError && (
+                <div className="ai-msg" style={{ background: 'rgba(239,68,68,0.12)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.25)' }}>
+                  {aiError}
+                </div>
+              )}
+            </div>
+
+            <div className="ai-input-wrap">
+              <textarea
+                className="ai-input"
+                value={aiInput}
+                placeholder={apiKey ? 'Ask the AI assistant…' : 'Add an Anthropic API key in Settings to enable.'}
+                onChange={e => setAiInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    if (aiInput.trim()) {
+                      const msg = buildContextHeader() + '## Question\n\n' + aiInput.trim();
+                      setAiInput('');
+                      sendAI(msg);
+                    }
+                  }
+                }}
+              />
+              <div className="ai-send-row">
+                <span className="ai-mini">⌘↵ to send · context: current scene auto-attached</span>
+                <Tip label="Send" desc="Send your question to the AI assistant." deepDesc="Sends your message to Claude. The header of every message automatically includes the screenplay title, the active character list, and the full text of the current scene as context, so you don't need to repeat that information yourself." shortcut="⌘+Enter">
+                  <button
+                    className="btn primary"
+                    disabled={!aiInput.trim() || aiLoading}
+                    onClick={() => {
+                      const msg = buildContextHeader() + '## Question\n\n' + aiInput.trim();
+                      setAiInput('');
+                      sendAI(msg);
+                    }}
+                  >
+                    <Icon name="send" size={12} /> Send
+                  </button>
+                </Tip>
+              </div>
+            </div>
+
+            {!apiKey && (
+              <div className="ai-key-wrap">
+                <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 6 }}>
+                  Add your Anthropic API key to enable AI. Stored locally only.
+                </div>
+                <input
+                  type="password"
+                  placeholder="sk-ant-..."
+                  onBlur={e => { if (e.target.value.trim()) saveApiKey(e.target.value.trim()); }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </aside>
+
+      {/* ============ SETTINGS MODAL ============ */}
+      {showSettings && (
+        <div className="modal-bg" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSettings(false); }}>
+          <div className="modal">
+            <h3>Settings</h3>
+            <p>Configure your Anthropic API key to power the AI assistant. The key is stored only in your browser's localStorage and is sent directly to Anthropic from your browser.</p>
+
+            <label style={{ fontSize: 12, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>Anthropic API key</label>
+            <input
+              type="password"
+              defaultValue={apiKey}
+              placeholder="sk-ant-..."
+              onBlur={e => saveApiKey(e.target.value.trim())}
+              style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 10px', color: 'var(--text-0)', fontFamily: 'monospace', fontSize: 12, outline: 'none' }}
+            />
+
+            <div style={{ marginTop: 18, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6 }}>
+              <div style={{ fontWeight: 600, color: 'var(--text-0)', marginBottom: 6 }}>Keyboard reference</div>
+              <div><b>Enter</b> — next element by context (Char→Dialogue, Dialogue→Action, etc.)</div>
+              <div><b>Tab</b> — cycle element type contextually</div>
+              <div><b>Shift+Tab</b> — previous element type</div>
+              <div><b>⌘1–7</b> — set element type explicitly</div>
+              <div><b>⌘S</b> — force save</div>
+              <div><b>⌘↵</b> (in AI input) — send message</div>
+              <div><b>Type INT./EXT.</b> — auto-converts to Scene Heading</div>
+              <div><b>Type "CUT TO:"</b> — auto-converts to Transition</div>
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn" onClick={() => {
+                if (confirm('Clear all local data (script + API key)? This cannot be undone.')) {
+                  localStorage.removeItem(STORAGE_KEY);
+                  localStorage.removeItem(KEY_STORAGE);
+                  location.reload();
+                }
+              }}>Reset all data</button>
+              <button className="btn primary" onClick={() => setShowSettings(false)}>Done</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+    </TipContext.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
