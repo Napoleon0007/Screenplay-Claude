@@ -499,6 +499,260 @@
   }
   .autocomplete button:hover, .autocomplete button.selected { background: var(--accent-soft); color: var(--accent); }
 
+  /* ---- library view ---- */
+  .library-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-0);
+    overflow: hidden;
+  }
+  .library-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .library-toolbar h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-0);
+    letter-spacing: -0.01em;
+  }
+  .library-toolbar .lib-spacer { flex: 1; }
+  .library-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .folder-pane {
+    width: 220px;
+    background: var(--bg-1);
+    border-right: 1px solid var(--border);
+    padding: 12px 8px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .folder-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-2);
+    font-size: 12.5px;
+    border: 1px solid transparent;
+    margin-bottom: 2px;
+  }
+  .folder-item:hover { background: var(--bg-2); color: var(--text-0); }
+  .folder-item.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: rgba(224,185,107,0.25);
+    font-weight: 500;
+  }
+  .folder-item .folder-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .folder-item.active .folder-count { color: var(--accent); opacity: 0.7; }
+  .folder-sep {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 4px;
+  }
+  .folder-add {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-3);
+    font-size: 12px;
+    border: 1px dashed var(--border-strong);
+    background: transparent;
+    width: 100%;
+    margin-top: 6px;
+    font-family: inherit;
+  }
+  .folder-add:hover { color: var(--accent); border-color: var(--accent); }
+  .folder-item .folder-rename {
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    width: 100%;
+    outline: none;
+    padding: 0;
+  }
+
+  .script-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+    align-content: start;
+  }
+  .script-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    transition: border-color 0.14s, transform 0.14s, box-shadow 0.14s;
+    position: relative;
+    overflow: hidden;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+  }
+  .script-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .script-card.current {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, var(--accent-soft) 0%, var(--bg-1) 60%);
+  }
+  .script-card .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-0);
+    margin-bottom: 6px;
+    word-break: break-word;
+    line-height: 1.3;
+  }
+  .script-card .card-folder {
+    font-size: 10.5px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+  }
+  .script-card .card-meta {
+    margin-top: auto;
+    font-size: 11.5px;
+    color: var(--text-2);
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+  .script-card .card-meta .dot {
+    width: 3px; height: 3px; border-radius: 50%;
+    background: var(--text-3);
+  }
+  .script-card .card-current-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--accent);
+    color: #1a1408;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: opacity 0.14s;
+  }
+  .script-card-actions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.14s;
+  }
+  .script-card:hover .script-card-actions { opacity: 1; }
+  .script-card:hover .card-current-badge { opacity: 0; }
+  .script-card-actions button {
+    background: var(--bg-3);
+    border: 1px solid var(--border-strong);
+    color: var(--text-2);
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-family: inherit;
+  }
+  .script-card-actions button:hover { color: var(--text-0); border-color: var(--text-2); }
+  .script-card-actions button.delete:hover { color: var(--danger); border-color: var(--danger); }
+
+  .new-script-card {
+    background: transparent;
+    border: 2px dashed var(--border-strong);
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    min-height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--text-3);
+    transition: all 0.14s;
+  }
+  .new-script-card:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(224,185,107,0.04);
+  }
+
+  .lib-empty {
+    grid-column: 1 / -1;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--text-3);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .sync-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 11px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+  }
+  .sync-chip.on   { color: #4ade80; border-color: rgba(74,222,128,0.3); }
+  .sync-chip.syncing { color: var(--accent); border-color: rgba(224,185,107,0.3); }
+  .sync-chip.error { color: var(--danger); border-color: rgba(239,68,68,0.3); }
+  .sync-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .inline-rename-input {
+    background: var(--bg-0);
+    border: 1px solid var(--accent);
+    color: var(--text-0);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+    width: 100%;
+    outline: none;
+  }
+
   /* ---- tooltips ---- */
   .tip {
     position: fixed;
@@ -637,7 +891,64 @@ const SCENE_PREFIXES = ['INT.', 'EXT.', 'INT/EXT', 'I/E', 'EST.'];
 const TRANSITIONS = ['CUT TO:', 'FADE OUT.', 'FADE IN:', 'SMASH CUT TO:', 'MATCH CUT TO:', 'DISSOLVE TO:', 'JUMP CUT TO:', 'TIME CUT:'];
 
 const STORAGE_KEY = 'screenplay_v2_doc';
+const LIBRARY_KEY = 'screenplay_library_v1';
 const KEY_STORAGE = 'screenplay_anthropic_key';
+const VAULT_KEY_STORAGE = 'screenplay_vault_key';
+
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+
+const relativeTime = (ts) => {
+  if (!ts) return 'never';
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
+  return new Date(ts).toLocaleDateString();
+};
+
+const makeBlankScript = (name = 'Untitled Screenplay', folder = null) => ({
+  id: uid(),
+  name,
+  folder,
+  doc: {
+    title: name,
+    author: '',
+    contact: '',
+    draftDate: '',
+    elements: [
+      { id: 1, type: 'scene_heading', text: '' },
+    ],
+  },
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+});
+
+const loadLibrary = () => {
+  try {
+    const saved = localStorage.getItem(LIBRARY_KEY);
+    if (saved) {
+      const lib = JSON.parse(saved);
+      if (lib && lib.scripts && Object.keys(lib.scripts).length > 0) return lib;
+    }
+  } catch {}
+  // migrate from legacy single-doc storage
+  let migratedDoc = null;
+  try {
+    const legacy = localStorage.getItem(STORAGE_KEY);
+    if (legacy) migratedDoc = JSON.parse(legacy);
+  } catch {}
+  const first = migratedDoc
+    ? { id: uid(), name: migratedDoc.title || 'Imported Screenplay', folder: null, doc: migratedDoc, createdAt: Date.now(), updatedAt: Date.now() }
+    : { ...makeBlankScript('Untitled Screenplay'), doc: { ...DEFAULT_DOC } };
+  return {
+    version: 1,
+    currentScriptId: first.id,
+    scripts: { [first.id]: first },
+    folders: [],
+    cloud: { lastSyncedAt: 0, lastSyncedFingerprint: null },
+  };
+};
 
 const DEFAULT_DOC = {
   title: 'UNTITLED',
@@ -1167,23 +1478,28 @@ const ScreenplayElement = React.memo(function ScreenplayElement({
 // MAIN APP
 // ============================================================
 function App() {
-  const [doc, setDoc] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return DEFAULT_DOC;
-  });
+  const [library, setLibrary] = useState(loadLibrary);
+  const currentScriptId = library.currentScriptId;
+  const [doc, setDoc] = useState(() => library.scripts[currentScriptId]?.doc || DEFAULT_DOC);
+
   const [focusedId, setFocusedId] = useState(null);
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [rightTab, setRightTab] = useState('ai'); // 'characters' | 'ai'
-  const [view, setView] = useState('script'); // 'script' | 'title'
+  const [view, setView] = useState('script'); // 'script' | 'title' | 'library'
   const [saveStatus, setSaveStatus] = useState('saved'); // 'saving' | 'saved'
   const [exportMenu, setExportMenu] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(KEY_STORAGE) || '');
   const [helpMode, setHelpMode] = useState(false);
+
+  // library / cloud sync
+  const [activeFolder, setActiveFolder] = useState(null); // null = All
+  const [vaultKey, setVaultKey] = useState(() => localStorage.getItem(VAULT_KEY_STORAGE) || '');
+  const [syncStatus, setSyncStatus] = useState('idle'); // 'idle' | 'syncing' | 'synced' | 'error'
+  const [syncError, setSyncError] = useState(null);
+  const [renamingId, setRenamingId] = useState(null);
+  const [renamingFolderId, setRenamingFolderId] = useState(null);
 
   // AI conversation
   const [aiMessages, setAiMessages] = useState([]);
@@ -1194,19 +1510,39 @@ function App() {
   const elementRefs = useRef({});
   const registerRef = useCallback((id, node) => { elementRefs.current[id] = node; }, []);
   const saveTimer = useRef(null);
+  const librarySaveTimer = useRef(null);
   const idCounter = useRef(Math.max(0, ...doc.elements.map(e => e.id)) + 1);
   const editorScrollRef = useRef(null);
 
-  // ---------- autosave ----------
+  // ---------- autosave doc → library ----------
   useEffect(() => {
     setSaveStatus('saving');
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(doc)); } catch {}
+      setLibrary(lib => {
+        const current = lib.scripts[lib.currentScriptId];
+        if (!current) return lib;
+        return {
+          ...lib,
+          scripts: {
+            ...lib.scripts,
+            [lib.currentScriptId]: { ...current, doc, name: doc.title || current.name, updatedAt: Date.now() },
+          },
+        };
+      });
       setSaveStatus('saved');
     }, 400);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [doc]);
+
+  // ---------- persist library to localStorage ----------
+  useEffect(() => {
+    if (librarySaveTimer.current) clearTimeout(librarySaveTimer.current);
+    librarySaveTimer.current = setTimeout(() => {
+      try { localStorage.setItem(LIBRARY_KEY, JSON.stringify(library)); } catch {}
+    }, 200);
+    return () => { if (librarySaveTimer.current) clearTimeout(librarySaveTimer.current); };
+  }, [library]);
 
   // ---------- derived ----------
   const scenes = useMemo(() => {
@@ -1561,21 +1897,219 @@ When you respond:
     });
   };
 
-  // ---------- title / new ----------
-  const newScript = () => {
-    if (!confirm('Start a new screenplay? This will discard the current draft (if not exported).')) return;
-    idCounter.current = 100;
-    setDoc({
-      title: 'UNTITLED',
-      author: doc.author || '',
-      contact: doc.contact || '',
-      draftDate: '',
-      elements: [
-        { id: idCounter.current++, type: 'scene_heading', text: '' },
-      ],
-    });
-    setAiMessages([]);
+  // ---------- library operations ----------
+  const newScript = (folderId = null, openImmediately = true) => {
+    const fresh = makeBlankScript('Untitled Screenplay', folderId);
+    fresh.doc.author = doc.author || '';
+    fresh.doc.contact = doc.contact || '';
+    setLibrary(lib => ({
+      ...lib,
+      scripts: { ...lib.scripts, [fresh.id]: fresh },
+      currentScriptId: openImmediately ? fresh.id : lib.currentScriptId,
+    }));
+    if (openImmediately) {
+      idCounter.current = 100;
+      setDoc(fresh.doc);
+      setAiMessages([]);
+      setView('script');
+    }
+    return fresh.id;
   };
+
+  const openScript = (id) => {
+    setLibrary(lib => {
+      const current = lib.scripts[lib.currentScriptId];
+      const updatedCurrent = current ? { ...current, doc, name: doc.title || current.name, updatedAt: Date.now() } : null;
+      const next = {
+        ...lib,
+        currentScriptId: id,
+        scripts: updatedCurrent
+          ? { ...lib.scripts, [lib.currentScriptId]: updatedCurrent }
+          : lib.scripts,
+      };
+      const target = next.scripts[id];
+      if (target) {
+        idCounter.current = Math.max(100, ...target.doc.elements.map(e => e.id || 0)) + 1;
+        setDoc(target.doc);
+        setAiMessages([]);
+      }
+      return next;
+    });
+    setView('script');
+  };
+
+  const deleteScript = (id) => {
+    if (!confirm('Delete this screenplay? This cannot be undone.')) return;
+    setLibrary(lib => {
+      const { [id]: removed, ...rest } = lib.scripts;
+      let nextId = lib.currentScriptId;
+      if (nextId === id) {
+        const remaining = Object.values(rest).sort((a, b) => b.updatedAt - a.updatedAt);
+        if (remaining.length === 0) {
+          const fresh = makeBlankScript('Untitled Screenplay');
+          setDoc(fresh.doc);
+          return { ...lib, scripts: { [fresh.id]: fresh }, currentScriptId: fresh.id };
+        }
+        nextId = remaining[0].id;
+        setDoc(remaining[0].doc);
+      }
+      return { ...lib, scripts: rest, currentScriptId: nextId };
+    });
+  };
+
+  const renameScript = (id, name) => {
+    setLibrary(lib => {
+      const s = lib.scripts[id];
+      if (!s) return lib;
+      const trimmed = name.trim() || 'Untitled';
+      const updated = { ...s, name: trimmed, updatedAt: Date.now() };
+      // if it's the current script, also update doc.title
+      if (id === lib.currentScriptId) {
+        updated.doc = { ...s.doc, title: trimmed };
+        setDoc(updated.doc);
+      }
+      return { ...lib, scripts: { ...lib.scripts, [id]: updated } };
+    });
+  };
+
+  const moveScript = (id, folderId) => {
+    setLibrary(lib => {
+      const s = lib.scripts[id];
+      if (!s) return lib;
+      return { ...lib, scripts: { ...lib.scripts, [id]: { ...s, folder: folderId, updatedAt: Date.now() } } };
+    });
+  };
+
+  const duplicateScript = (id) => {
+    setLibrary(lib => {
+      const s = lib.scripts[id];
+      if (!s) return lib;
+      const copy = { ...s, id: uid(), name: `${s.name} (copy)`, createdAt: Date.now(), updatedAt: Date.now() };
+      return { ...lib, scripts: { ...lib.scripts, [copy.id]: copy } };
+    });
+  };
+
+  const addFolder = () => {
+    const name = prompt('Folder name:');
+    if (!name || !name.trim()) return;
+    const folder = { id: uid(), name: name.trim(), createdAt: Date.now() };
+    setLibrary(lib => ({ ...lib, folders: [...lib.folders, folder] }));
+    setActiveFolder(folder.id);
+  };
+
+  const renameFolder = (id, name) => {
+    if (!name || !name.trim()) return;
+    setLibrary(lib => ({
+      ...lib,
+      folders: lib.folders.map(f => f.id === id ? { ...f, name: name.trim() } : f),
+    }));
+  };
+
+  const deleteFolder = (id) => {
+    const folder = library.folders.find(f => f.id === id);
+    if (!folder) return;
+    const inside = Object.values(library.scripts).filter(s => s.folder === id).length;
+    const msg = inside === 0
+      ? `Delete folder "${folder.name}"?`
+      : `Delete folder "${folder.name}"? The ${inside} script${inside === 1 ? '' : 's'} inside will be moved to Unfiled.`;
+    if (!confirm(msg)) return;
+    setLibrary(lib => ({
+      ...lib,
+      folders: lib.folders.filter(f => f.id !== id),
+      scripts: Object.fromEntries(
+        Object.entries(lib.scripts).map(([sid, s]) => [sid, s.folder === id ? { ...s, folder: null } : s])
+      ),
+    }));
+    if (activeFolder === id) setActiveFolder(null);
+  };
+
+  // ---------- cloud sync ----------
+  const saveVaultKey = (k) => {
+    setVaultKey(k);
+    try { localStorage.setItem(VAULT_KEY_STORAGE, k); } catch {}
+  };
+
+  const pushToCloud = async () => {
+    if (!vaultKey || vaultKey.length < 4) {
+      setSyncError('Set a vault key (4+ chars) in Settings first.');
+      setSyncStatus('error');
+      return;
+    }
+    setSyncStatus('syncing');
+    setSyncError(null);
+    try {
+      const res = await fetch('/api/sync', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', 'x-vault-key': vaultKey },
+        body: JSON.stringify(library),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Sync failed (${res.status})`);
+      }
+      setLibrary(lib => ({ ...lib, cloud: { ...lib.cloud, lastSyncedAt: Date.now() } }));
+      setSyncStatus('synced');
+      setTimeout(() => setSyncStatus(s => s === 'synced' ? 'idle' : s), 2400);
+    } catch (e) {
+      setSyncError(e.message);
+      setSyncStatus('error');
+    }
+  };
+
+  const pullFromCloud = async () => {
+    if (!vaultKey || vaultKey.length < 4) {
+      setSyncError('Set a vault key (4+ chars) in Settings first.');
+      setSyncStatus('error');
+      return;
+    }
+    if (!confirm('Pull library from cloud? This will replace your local library with the cloud copy. Push first if you want to save local changes.')) return;
+    setSyncStatus('syncing');
+    setSyncError(null);
+    try {
+      const res = await fetch('/api/sync', { headers: { 'x-vault-key': vaultKey } });
+      if (res.status === 404) {
+        setSyncError('No cloud library found for this vault key.');
+        setSyncStatus('error');
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Pull failed (${res.status})`);
+      }
+      const remote = await res.json();
+      if (!remote || !remote.scripts) throw new Error('Cloud library is invalid.');
+      setLibrary(remote);
+      const current = remote.scripts[remote.currentScriptId];
+      if (current) {
+        idCounter.current = Math.max(100, ...current.doc.elements.map(e => e.id || 0)) + 1;
+        setDoc(current.doc);
+      }
+      setSyncStatus('synced');
+      setTimeout(() => setSyncStatus(s => s === 'synced' ? 'idle' : s), 2400);
+    } catch (e) {
+      setSyncError(e.message);
+      setSyncStatus('error');
+    }
+  };
+
+  // derived library data
+  const scriptsByFolder = useMemo(() => {
+    const all = Object.values(library.scripts).sort((a, b) => b.updatedAt - a.updatedAt);
+    if (activeFolder === null) return all;
+    if (activeFolder === '__unfiled') return all.filter(s => !s.folder);
+    return all.filter(s => s.folder === activeFolder);
+  }, [library.scripts, activeFolder]);
+
+  const folderCounts = useMemo(() => {
+    const counts = { __all: 0, __unfiled: 0 };
+    for (const f of library.folders) counts[f.id] = 0;
+    for (const s of Object.values(library.scripts)) {
+      counts.__all++;
+      if (s.folder && counts[s.folder] != null) counts[s.folder]++;
+      else counts.__unfiled++;
+    }
+    return counts;
+  }, [library.scripts, library.folders]);
 
   // close export menu on outside click
   useEffect(() => {
@@ -1676,6 +2210,16 @@ When you respond:
           </Tip>
 
           <div style={{ width: 8 }} />
+
+          <Tip
+            label="Library"
+            desc="See all your screenplays, organised by folder."
+            deepDesc="Opens your screenplay library — every script you've written, grouped into folders. From here you can open any script, start a new one, rename, duplicate, move between folders, or delete. Your library lives in this browser and (optionally) syncs to your Railway cloud bucket."
+          >
+            <button className={`btn ghost ${view === 'library' ? 'active' : ''}`} onClick={() => setView(v => v === 'library' ? 'script' : 'library')}>
+              <Icon name="book" /> Library
+            </button>
+          </Tip>
 
           <Tip
             label="Title page"
@@ -1804,7 +2348,198 @@ When you respond:
           </div>
         )}
 
+        {/* ---- library view ---- */}
+        {view === 'library' && (
+          <div className="library-view">
+            <div className="library-toolbar">
+              <h2>Library</h2>
+              <span className="sync-chip">
+                <span className="dot" />
+                {Object.keys(library.scripts).length} script{Object.keys(library.scripts).length === 1 ? '' : 's'}
+              </span>
+              {library.cloud?.lastSyncedAt > 0 && (
+                <span className={`sync-chip ${syncStatus === 'syncing' ? 'syncing' : syncStatus === 'error' ? 'error' : 'on'}`}>
+                  <span className="dot" />
+                  {syncStatus === 'syncing' ? 'Syncing…' :
+                   syncStatus === 'error' ? 'Sync failed' :
+                   `Synced ${relativeTime(library.cloud.lastSyncedAt)}`}
+                </span>
+              )}
+              <div className="lib-spacer" />
+              <Tip label="Back to script" desc="Return to the editor for the currently open script.">
+                <button className="btn ghost" onClick={() => setView('script')}>
+                  <Icon name="chevronLeft" /> Back
+                </button>
+              </Tip>
+              {vaultKey && (
+                <Tip label="Push to cloud" desc="Upload the entire library to your Railway bucket now." deepDesc="Sends your full local library — every script and folder — to your Railway-hosted cloud bucket. The bucket is scoped by your vault key, so only someone with the same key can read or overwrite it. Set the vault key in Settings.">
+                  <button className="btn" disabled={syncStatus === 'syncing'} onClick={pushToCloud}>
+                    <Icon name="save" /> Push
+                  </button>
+                </Tip>
+              )}
+              {vaultKey && (
+                <Tip label="Pull from cloud" desc="Replace your local library with the cloud copy." deepDesc="Downloads the library currently stored in your Railway bucket under this vault key, and replaces what's in this browser. Useful when switching machines. You'll be asked to confirm — push first if there are local changes you don't want to lose.">
+                  <button className="btn ghost" disabled={syncStatus === 'syncing'} onClick={pullFromCloud}>
+                    <Icon name="download" /> Pull
+                  </button>
+                </Tip>
+              )}
+              <Tip label="New screenplay" desc="Start a fresh blank screenplay in the current folder." shortcut="">
+                <button className="btn primary" onClick={() => newScript(activeFolder && activeFolder !== '__unfiled' ? activeFolder : null)}>
+                  <Icon name="plus" /> New script
+                </button>
+              </Tip>
+            </div>
+
+            {syncError && (
+              <div style={{ padding: '10px 24px', color: '#fca5a5', background: 'rgba(239,68,68,0.08)', borderBottom: '1px solid rgba(239,68,68,0.2)', fontSize: 12.5 }}>
+                {syncError}
+              </div>
+            )}
+
+            <div className="library-body">
+              <div className="folder-pane">
+                <div
+                  className={`folder-item ${activeFolder === null ? 'active' : ''}`}
+                  onClick={() => setActiveFolder(null)}
+                >
+                  <Icon name="book" size={14} />
+                  All scripts
+                  <span className="folder-count">{folderCounts.__all}</span>
+                </div>
+                <div
+                  className={`folder-item ${activeFolder === '__unfiled' ? 'active' : ''}`}
+                  onClick={() => setActiveFolder('__unfiled')}
+                >
+                  <Icon name="file" size={14} />
+                  Unfiled
+                  <span className="folder-count">{folderCounts.__unfiled}</span>
+                </div>
+                {library.folders.length > 0 && <div className="folder-sep" />}
+                {library.folders.map(f => (
+                  <div
+                    key={f.id}
+                    className={`folder-item ${activeFolder === f.id ? 'active' : ''}`}
+                    onClick={() => setActiveFolder(f.id)}
+                    onDoubleClick={() => setRenamingFolderId(f.id)}
+                  >
+                    <Icon name="book" size={14} />
+                    {renamingFolderId === f.id ? (
+                      <input
+                        className="folder-rename"
+                        autoFocus
+                        defaultValue={f.name}
+                        onClick={e => e.stopPropagation()}
+                        onBlur={e => { renameFolder(f.id, e.target.value); setRenamingFolderId(null); }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') e.target.blur();
+                          if (e.key === 'Escape') setRenamingFolderId(null);
+                        }}
+                      />
+                    ) : (
+                      <span style={{ flex: 1 }}>{f.name}</span>
+                    )}
+                    <span className="folder-count">{folderCounts[f.id] || 0}</span>
+                    <Tip label="Delete folder" desc="Scripts inside will move to Unfiled.">
+                      <button
+                        style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: 2, marginLeft: 4 }}
+                        onClick={(e) => { e.stopPropagation(); deleteFolder(f.id); }}
+                      ><Icon name="x" size={12} /></button>
+                    </Tip>
+                  </div>
+                ))}
+                <button className="folder-add" onClick={addFolder}>
+                  <Icon name="plus" size={12} /> New folder
+                </button>
+              </div>
+
+              <div className="script-grid">
+                <div
+                  className="new-script-card"
+                  onClick={() => newScript(activeFolder && activeFolder !== '__unfiled' ? activeFolder : null)}
+                >
+                  <Icon name="plus" size={28} />
+                  <span style={{ fontSize: 12.5, fontWeight: 500 }}>New screenplay</span>
+                </div>
+
+                {scriptsByFolder.map(s => {
+                  const folder = s.folder ? library.folders.find(f => f.id === s.folder) : null;
+                  return (
+                    <div
+                      key={s.id}
+                      className={`script-card ${s.id === currentScriptId ? 'current' : ''}`}
+                      onClick={() => openScript(s.id)}
+                    >
+                      {s.id === currentScriptId && (
+                        <span className="card-current-badge">Open</span>
+                      )}
+                      <div className="script-card-actions" onClick={e => e.stopPropagation()}>
+                        <Tip label="Rename"><button onClick={() => setRenamingId(s.id)}>✎</button></Tip>
+                        <Tip label="Duplicate"><button onClick={() => duplicateScript(s.id)}>⧉</button></Tip>
+                        <Tip label="Move to folder">
+                          <button onClick={() => {
+                            const choice = prompt(
+                              'Move to folder. Type folder name (or leave blank for Unfiled):\nFolders: ' +
+                              (library.folders.map(f => f.name).join(', ') || '(none yet)')
+                            );
+                            if (choice === null) return;
+                            const t = choice.trim();
+                            if (!t) { moveScript(s.id, null); return; }
+                            const match = library.folders.find(f => f.name.toLowerCase() === t.toLowerCase());
+                            if (match) moveScript(s.id, match.id);
+                            else {
+                              const fid = uid();
+                              setLibrary(lib => ({ ...lib, folders: [...lib.folders, { id: fid, name: t, createdAt: Date.now() }] }));
+                              moveScript(s.id, fid);
+                            }
+                          }}>→</button>
+                        </Tip>
+                        <Tip label="Delete script">
+                          <button className="delete" onClick={() => deleteScript(s.id)}><Icon name="trash" size={13} /></button>
+                        </Tip>
+                      </div>
+
+                      {renamingId === s.id ? (
+                        <input
+                          className="inline-rename-input"
+                          autoFocus
+                          defaultValue={s.name}
+                          onClick={e => e.stopPropagation()}
+                          onBlur={e => { renameScript(s.id, e.target.value); setRenamingId(null); }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') e.target.blur();
+                            if (e.key === 'Escape') setRenamingId(null);
+                          }}
+                        />
+                      ) : (
+                        <div className="card-title">{s.name || 'Untitled'}</div>
+                      )}
+                      <div className="card-folder">{folder ? folder.name : 'Unfiled'}</div>
+                      <div className="card-meta">
+                        <span>{estimatePages(s.doc.elements)} pg</span>
+                        <span className="dot" />
+                        <span>{countWords(s.doc.elements).toLocaleString()} words</span>
+                        <span className="dot" />
+                        <span>{relativeTime(s.updatedAt)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {scriptsByFolder.length === 0 && (
+                  <div className="lib-empty">
+                    No scripts in this folder yet.<br />
+                    Click <b>New screenplay</b> above to start one.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ---- editor / pages ---- */}
+        {view !== 'library' && (
         <div className="editor-scroll" ref={editorScrollRef}>
           {view === 'title' && (
             <div className="titlepage">
@@ -1861,6 +2596,7 @@ When you respond:
             </div>
           )}
         </div>
+        )}
       </main>
 
       {/* ============ RIGHT SIDEBAR ============ */}
@@ -2010,11 +2746,13 @@ When you respond:
       {/* ============ SETTINGS MODAL ============ */}
       {showSettings && (
         <div className="modal-bg" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowSettings(false); }}>
-          <div className="modal">
+          <div className="modal" style={{ width: 520, maxHeight: '85vh', overflowY: 'auto' }}>
             <h3>Settings</h3>
-            <p>Configure your Anthropic API key to power the AI assistant. The key is stored only in your browser's localStorage and is sent directly to Anthropic from your browser.</p>
 
-            <label style={{ fontSize: 12, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>Anthropic API key</label>
+            <label style={{ fontSize: 12, color: 'var(--text-2)', display: 'block', marginBottom: 6, marginTop: 4, fontWeight: 600 }}>Anthropic API key</label>
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 8, lineHeight: 1.5 }}>
+              Powers the AI assistant. Stored only in this browser, sent directly to Anthropic.
+            </div>
             <input
               type="password"
               defaultValue={apiKey}
@@ -2023,7 +2761,37 @@ When you respond:
               style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 10px', color: 'var(--text-0)', fontFamily: 'monospace', fontSize: 12, outline: 'none' }}
             />
 
-            <div style={{ marginTop: 18, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6 }}>
+            <label style={{ fontSize: 12, color: 'var(--text-2)', display: 'block', marginBottom: 6, marginTop: 18, fontWeight: 600 }}>Cloud vault key</label>
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 8, lineHeight: 1.5 }}>
+              A password that scopes your library in the cloud bucket. Anyone who knows this key can read or overwrite your scripts — pick something long and memorable. Leave blank for local-only mode.
+            </div>
+            <input
+              type="password"
+              defaultValue={vaultKey}
+              placeholder="your-vault-key (min. 4 chars)"
+              onBlur={e => saveVaultKey(e.target.value.trim())}
+              style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 10px', color: 'var(--text-0)', fontFamily: 'monospace', fontSize: 12, outline: 'none' }}
+            />
+            {vaultKey && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button className="btn" disabled={syncStatus === 'syncing'} onClick={pushToCloud}>
+                  <Icon name="save" size={13} /> Push library to cloud
+                </button>
+                <button className="btn ghost" disabled={syncStatus === 'syncing'} onClick={pullFromCloud}>
+                  <Icon name="download" size={13} /> Pull from cloud
+                </button>
+                <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 'auto' }}>
+                  {syncStatus === 'syncing' ? 'Syncing…' :
+                   library.cloud?.lastSyncedAt ? `Last synced ${relativeTime(library.cloud.lastSyncedAt)}` :
+                   'Not synced yet'}
+                </span>
+              </div>
+            )}
+            {syncError && (
+              <div style={{ marginTop: 8, fontSize: 11.5, color: '#fca5a5' }}>{syncError}</div>
+            )}
+
+            <div style={{ marginTop: 22, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.65 }}>
               <div style={{ fontWeight: 600, color: 'var(--text-0)', marginBottom: 6 }}>Keyboard reference</div>
               <div><b>Enter</b> — next element by context (Char→Dialogue, Dialogue→Action, etc.)</div>
               <div><b>Tab</b> — cycle element type contextually</div>
@@ -2037,9 +2805,11 @@ When you respond:
 
             <div className="modal-actions">
               <button className="btn" onClick={() => {
-                if (confirm('Clear all local data (script + API key)? This cannot be undone.')) {
+                if (confirm('Clear all local data (every script + keys)? This cannot be undone. Push to cloud first if you want to keep a copy.')) {
                   localStorage.removeItem(STORAGE_KEY);
+                  localStorage.removeItem(LIBRARY_KEY);
                   localStorage.removeItem(KEY_STORAGE);
+                  localStorage.removeItem(VAULT_KEY_STORAGE);
                   location.reload();
                 }
               }}>Reset all data</button>
